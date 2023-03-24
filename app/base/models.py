@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from django.conf import settings
 
 
 class UserManager(BaseUserManager):
@@ -65,3 +66,38 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
+
+
+# class Note(models.Model):
+#     """Note object."""
+#     note_name = models.CharField(max_length=255)
+#     note_type = models.IntegerField()
+#
+#
+# class Designer(models.Model):
+#     """Designer object"""
+#     designer_name = models.CharField(max_length=255)
+
+
+class Perfume(models.Model):
+    """Recipe object."""
+    user = models.ForeignKey(
+        # Best practise to reference User model from settings
+        # not putting hard codded string that in case of update
+        # has to be changed
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    # notes = models.ManyToManyField('Note')
+    # designers = models.ManyToManyField('Designer')
+    title = models.CharField(max_length=255)
+    rating = models.DecimalField(max_digits=4, decimal_places=2)
+    number_of_votes = models.IntegerField()
+    gender = models.IntegerField()
+    longevity = models.DecimalField(max_digits=4, decimal_places=2)
+    sillage = models.DecimalField(max_digits=4, decimal_places=2)
+    price_value = models.DecimalField(max_digits=4, decimal_places=2)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.title

@@ -51,3 +51,6 @@ class UserAdmin(BaseUserAdmin):
 
 
 admin.site.register(models.User, UserAdmin)
+admin.site.register(models.Perfume)
+# admin.site.register(models.Note)
+# admin.site.register(models.Designer)

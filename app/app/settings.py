@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     # Apps
     'base',
     'user',
+    'perfume',
+
     'rest_framework',
     'drf_spectacular',
     'rest_framework.authtoken',

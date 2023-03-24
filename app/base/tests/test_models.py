@@ -3,6 +3,8 @@ Tests for models.
 """
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from base import models
+from decimal import Decimal
 
 """
 get_user_model helper function is provided by Django in order to get the default user model
@@ -57,3 +59,42 @@ class ModelTests(TestCase):
 
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
+
+    def test_create_perfume(self):
+        """Test creating a perfume record is successful."""
+
+        user = get_user_model().objects.create_user(
+            'test@example.com',
+            'testpass123',
+        )
+
+        # note1, created = models.Note.objects.get_or_create(
+        #     note_name="Bergamot",
+        #     note_type=2,
+        # )
+        #
+        # note2, created = models.Note.objects.get_or_create(
+        #     note_name="Patchouli",
+        #     note_type=0,
+        # )
+        #
+        # designer1, created = models.Designer.objects.get_or_create(
+        #     designer_name="Jean claude Ellena",
+        # )
+
+        perfume = models.Perfume.objects.create(
+            user=user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+
+        # perfume.notes.set([note1, note2])
+        # perfume.designers.set([designer1])
+
+        self.assertEqual(str(perfume), perfume.title)
