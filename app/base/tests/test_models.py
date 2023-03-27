@@ -18,6 +18,11 @@ to get a reference to your custom user model.
 """
 
 
+def create_user(email='user@example.com', password='testpass123'):
+    """Create a return a new user."""
+    return get_user_model().objects.create_user(email, password)
+
+
 class ModelTests(TestCase):
     """Test models."""
 
@@ -98,3 +103,7 @@ class ModelTests(TestCase):
         # perfume.designers.set([designer1])
 
         self.assertEqual(str(perfume), perfume.title)
+
+    def test_create_designer(self):
+        designer = models.Designer.objects.create(name='Christian Dior')
+        self.assertEqual(str(designer), designer.name)

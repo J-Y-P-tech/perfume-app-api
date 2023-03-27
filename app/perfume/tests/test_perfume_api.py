@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from base.models import Perfume
+from base.models import Perfume, Designer
 
 from perfume.serializers import (
     PerfumeSerializer,
@@ -220,3 +220,97 @@ class PrivatePerfumeApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(Perfume.objects.filter(id=perfume.id).exists())
+
+    def test_perfume_recipe_with_new_designers(self):
+        """Test creating a perfume with new designers."""
+        payload = {
+            'title': 'Sample perfume name',
+            'rating': Decimal('5.50'),
+            'number_of_votes': 2500,
+            'gender': 0,
+            'longevity': Decimal('6.1'),
+            'sillage': Decimal('4.2'),
+            'price_value': Decimal('7.0'),
+            'description': "Perfume description.",
+            'designers': [{'name': 'Christian Dion'}, {'name': 'Bulgari'}],
+        }
+        res = self.client.post(PERFUMES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        perfumes = Perfume.objects.filter(user=self.user)
+        self.assertEqual(perfumes.count(), 1)
+        perfume = perfumes[0]
+        self.assertEqual(perfume.designers.count(), 2)
+        for designer in payload['designers']:
+            exists = perfume.designers.filter(
+                name=designer['name'],
+            ).exists()
+            self.assertTrue(exists)
+
+    def test_create_perfume_with_existing_designers(self):
+        """Test creating a recipe with existing designer."""
+        designer_1 = Designer.objects.create(name='Designer 1')
+        payload = {
+            'title': 'Sample perfume name',
+            'rating': Decimal('5.50'),
+            'number_of_votes': 2500,
+            'gender': 0,
+            'longevity': Decimal('6.1'),
+            'sillage': Decimal('4.2'),
+            'price_value': Decimal('7.0'),
+            'description': "Perfume description.",
+            'designers': [{'name': 'Christian Dion'}, {'name': 'Designer 1'}],
+        }
+        res = self.client.post(PERFUMES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        perfumes = Perfume.objects.filter(user=self.user)
+        self.assertEqual(perfumes.count(), 1)
+        perfume = perfumes[0]
+        self.assertEqual(perfume.designers.count(), 2)
+        self.assertIn(designer_1, perfume.designers.all())
+        for designer in payload['designers']:
+            exists = perfume.designers.filter(
+                name=designer['name'],
+            ).exists()
+            self.assertTrue(exists)
+
+    def test_create_designer_on_update(self):
+        """Test create designer when updating a perfume."""
+        perfume = create_perfume(user=self.user)
+
+        payload = {'designers': [{'name': 'Luis Vuton'}]}
+        url = detail_url(perfume.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        new_designer = Designer.objects.get(name='Luis Vuton')
+        self.assertIn(new_designer, perfume.designers.all())
+
+    def test_update_perfume_assign_designer(self):
+        """Test assigning an existing designer when updating a perfume."""
+        designer_one = Designer.objects.create(name='Designer One')
+        perfume = create_perfume(user=self.user)
+        perfume.designers.add(designer_one)
+
+        designer_two = Designer.objects.create(name='Designer Two')
+        payload = {'designers': [{'name': 'Designer Two'}]}
+        url = detail_url(perfume.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(designer_two, perfume.designers.all())
+        self.assertNotIn(designer_one, perfume.designers.all())
+
+    def test_clear_perfume_designers(self):
+        """Test clearing a perfume designers."""
+        designer = Designer.objects.create(name='Karl Lagerfelt')
+        perfume = create_perfume(user=self.user)
+        perfume.designers.add(designer)
+
+        payload = {'designers': []}
+        url = detail_url(perfume.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(perfume.designers.count(), 0)

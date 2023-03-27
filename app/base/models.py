@@ -74,9 +74,13 @@ class User(AbstractBaseUser, PermissionsMixin):
 #     note_type = models.IntegerField()
 #
 #
-# class Designer(models.Model):
-#     """Designer object"""
-#     designer_name = models.CharField(max_length=255)
+
+class Designer(models.Model):
+    """Designer object"""
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
 
 
 class Perfume(models.Model):
@@ -89,7 +93,7 @@ class Perfume(models.Model):
         on_delete=models.CASCADE,
     )
     # notes = models.ManyToManyField('Note')
-    # designers = models.ManyToManyField('Designer')
+    designers = models.ManyToManyField('Designer')
     title = models.CharField(max_length=255)
     rating = models.DecimalField(max_digits=4, decimal_places=2)
     number_of_votes = models.IntegerField()

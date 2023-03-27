@@ -1,16 +1,16 @@
 """
 Views for the recipe APIs
 """
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-from base.models import Perfume
+from base.models import Perfume, Designer
 from perfume import serializers
 
 
 class PerfumeViewSet(viewsets.ModelViewSet):
-    """View for manage recipe APIs."""
+    """View for manage perfume APIs."""
     serializer_class = serializers.PerfumeDetailSerializer
     queryset = Perfume.objects.all()
     # authentication_classes = (TokenAuthentication,)
@@ -19,7 +19,7 @@ class PerfumeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Retrieve recipes for authenticated user."""
+        """Retrieve perfumes for authenticated user."""
         return self.queryset.filter(user=self.request.user).order_by('-id')
 
     def get_serializer_class(self):
@@ -41,3 +41,18 @@ class PerfumeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create a new perfume."""
         serializer.save(user=self.request.user)
+
+
+class DesignerViewSet(mixins.DestroyModelMixin,
+                      mixins.UpdateModelMixin,
+                      mixins.ListModelMixin,
+                      viewsets.GenericViewSet):
+    """View to manage designer API"""
+    serializer_class = serializers.DesignerSerializer
+    queryset = Designer.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Retrieve designers for authenticated users only."""
+        return self.queryset.order_by('-id')
