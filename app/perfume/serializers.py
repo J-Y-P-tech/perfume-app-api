@@ -24,6 +24,16 @@ class NoteSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class PerfumeImageSerializer(serializers.ModelSerializer):
+    """Serializer for uploading images to perfumes."""
+
+    class Meta:
+        model = Perfume
+        fields = ['id', 'image']
+        read_only_fields = ['id']
+        extra_kwargs = {'image': {'required': 'True'}}
+
+
 class PerfumeSerializer(serializers.ModelSerializer):
     """Serializer for perfumes."""
     designers = DesignerSerializer(many=True, required=False)
@@ -40,7 +50,7 @@ class PerfumeDetailSerializer(PerfumeSerializer):
     """Serializer for perfume detail view."""
 
     class Meta(PerfumeSerializer.Meta):
-        fields = PerfumeSerializer.Meta.fields + ['description']
+        fields = PerfumeSerializer.Meta.fields + ['description', 'image']
 
     @staticmethod
     def _get_or_create_designers(designers, perfume):

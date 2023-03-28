@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from base import models
 from decimal import Decimal
+from unittest.mock import patch
 
 """
 get_user_model helper function is provided by Django in order to get the default user model
@@ -116,3 +117,12 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(note), note.name)
+
+    @patch('base.models.uuid.uuid4')
+    def test_perfume_file_name_uuid(self, mock_uuid):
+        """Test generating image path."""
+        uuid = 'test-uuid'
+        mock_uuid.return_value = uuid
+        file_path = models.perfume_image_file_path(None, 'example.jpg')
+
+        self.assertEqual(file_path, f'uploads/perfume/{uuid}.jpg')

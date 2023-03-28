@@ -9,6 +9,20 @@ from django.contrib.auth.models import (
 )
 from django.conf import settings
 
+import uuid
+import os
+
+
+def perfume_image_file_path(instance, filename):
+    """Generate file path for new perfume image."""
+    # get file extension
+    ext = os.path.splitext(filename)[1]
+    filename = f'{uuid.uuid4()}{ext}'
+
+    # This ensures that the path is created according to
+    # the operating system that we are running on
+    return os.path.join('uploads', 'perfume', filename)
+
 
 class UserManager(BaseUserManager):
     """Manager for users."""
@@ -104,6 +118,7 @@ class Perfume(models.Model):
     sillage = models.DecimalField(max_digits=4, decimal_places=2)
     price_value = models.DecimalField(max_digits=4, decimal_places=2)
     description = models.TextField(blank=True)
+    image = models.ImageField(null=True, upload_to=perfume_image_file_path)
 
     def __str__(self):
         return self.title
