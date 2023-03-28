@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from base.models import Perfume, Designer
+from base.models import Perfume, Designer, Note
 
 from perfume.serializers import (
     PerfumeSerializer,
@@ -221,7 +221,7 @@ class PrivatePerfumeApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(Perfume.objects.filter(id=perfume.id).exists())
 
-    def test_perfume_recipe_with_new_designers(self):
+    def test_perfume_with_new_designers(self):
         """Test creating a perfume with new designers."""
         payload = {
             'title': 'Sample perfume name',
@@ -314,3 +314,101 @@ class PrivatePerfumeApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(perfume.designers.count(), 0)
+
+    def test_perfume_with_new_notes(self):
+        """Test creating a perfume with new notes."""
+        payload = {
+            'title': 'Sample perfume name',
+            'rating': Decimal('5.50'),
+            'number_of_votes': 2500,
+            'gender': 0,
+            'longevity': Decimal('6.1'),
+            'sillage': Decimal('4.2'),
+            'price_value': Decimal('7.0'),
+            'description': "Perfume description.",
+            'notes': [{'name': 'Patchouli', 'type': 0},
+                      {'name': 'Rose Oil', 'type': 1}],
+        }
+        res = self.client.post(PERFUMES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        perfumes = Perfume.objects.filter(user=self.user)
+        self.assertEqual(perfumes.count(), 1)
+        perfume = perfumes[0]
+        self.assertEqual(perfume.notes.count(), 2)
+        for note in payload['notes']:
+            exists = perfume.notes.filter(
+                name=note['name'],
+                type=note['type'],
+            ).exists()
+            self.assertTrue(exists)
+
+    def test_create_perfume_with_existing_notes(self):
+        """Test creating a perfume with existing note."""
+        note_1 = Note.objects.create(name='Olibanum', type=1)
+        payload = {
+            'title': 'Sample perfume name',
+            'rating': Decimal('5.50'),
+            'number_of_votes': 2500,
+            'gender': 0,
+            'longevity': Decimal('6.1'),
+            'sillage': Decimal('4.2'),
+            'price_value': Decimal('7.0'),
+            'description': "Perfume description.",
+            'notes': [{'name': 'Romandolide', 'type': 0},
+                      {'name': 'Olibanum', 'type': 1}],
+        }
+        res = self.client.post(PERFUMES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        perfumes = Perfume.objects.filter(user=self.user)
+        self.assertEqual(perfumes.count(), 1)
+        perfume = perfumes[0]
+        self.assertEqual(perfume.notes.count(), 2)
+        self.assertIn(note_1, perfume.notes.all())
+        for note in payload['notes']:
+            exists = perfume.notes.filter(
+                name=note['name'],
+                type=note['type'],
+            ).exists()
+            self.assertTrue(exists)
+
+    def test_create_note_on_update(self):
+        """Test create note when updating a perfume."""
+        perfume = create_perfume(user=self.user)
+
+        payload = {'notes': [{'name': 'Patchouli', 'type': 0}]}
+        url = detail_url(perfume.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        new_note = Note.objects.get(name='Patchouli', type=0)
+        self.assertIn(new_note, perfume.notes.all())
+
+    def test_update_perfume_assign_note(self):
+        """Test assigning an existing note when updating a perfume."""
+        note_one = Note.objects.create(name='Patchouli', type=0)
+        perfume = create_perfume(user=self.user)
+        perfume.notes.add(note_one)
+
+        note_two = Note.objects.create(name='Vetiver', type=0)
+        payload = {'notes': [{'name': 'Vetiver', 'type': 0}]}
+        url = detail_url(perfume.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(note_two, perfume.notes.all())
+        self.assertNotIn(note_one, perfume.notes.all())
+
+    def test_clear_perfume_notes(self):
+        """Test clearing a perfume notes."""
+        note = Note.objects.create(name='Ethyl Vanillin', type=0)
+        perfume = create_perfume(user=self.user)
+        perfume.notes.add(note)
+
+        payload = {'notes': []}
+        url = detail_url(perfume.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(perfume.notes.count(), 0)

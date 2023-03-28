@@ -68,12 +68,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
 
 
-# class Note(models.Model):
-#     """Note object."""
-#     note_name = models.CharField(max_length=255)
-#     note_type = models.IntegerField()
-#
-#
+class Note(models.Model):
+    """Note object."""
+    name = models.CharField(max_length=255)
+    type = models.IntegerField()
+
+    def __str__(self):
+        return self.name
+
 
 class Designer(models.Model):
     """Designer object"""
@@ -92,7 +94,7 @@ class Perfume(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
-    # notes = models.ManyToManyField('Note')
+    notes = models.ManyToManyField('Note')
     designers = models.ManyToManyField('Designer')
     title = models.CharField(max_length=255)
     rating = models.DecimalField(max_digits=4, decimal_places=2)

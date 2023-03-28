@@ -5,7 +5,7 @@ from rest_framework import viewsets, mixins
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-from base.models import Perfume, Designer
+from base.models import Perfume, Designer, Note
 from perfume import serializers
 
 
@@ -43,16 +43,26 @@ class PerfumeViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class DesignerViewSet(mixins.DestroyModelMixin,
+class BaseAttrViewSet(mixins.DestroyModelMixin,
                       mixins.UpdateModelMixin,
                       mixins.ListModelMixin,
                       viewsets.GenericViewSet):
     """View to manage designer API"""
-    serializer_class = serializers.DesignerSerializer
-    queryset = Designer.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         """Retrieve designers for authenticated users only."""
         return self.queryset.order_by('-id')
+
+
+class DesignerViewSet(BaseAttrViewSet):
+    """View to manage designer API"""
+    serializer_class = serializers.DesignerSerializer
+    queryset = Designer.objects.all()
+
+
+class NoteViewSet(BaseAttrViewSet):
+    """View to manage note API."""
+    serializer_class = serializers.NoteSerializer
+    queryset = Note.objects.all()

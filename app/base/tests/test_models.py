@@ -107,3 +107,12 @@ class ModelTests(TestCase):
     def test_create_designer(self):
         designer = models.Designer.objects.create(name='Christian Dior')
         self.assertEqual(str(designer), designer.name)
+
+    def test_create_note(self):
+        """Test creating a note is successful."""
+        note = models.Note.objects.create(
+            type=0,
+            name='Patchouli'
+        )
+
+        self.assertEqual(str(note), note.name)

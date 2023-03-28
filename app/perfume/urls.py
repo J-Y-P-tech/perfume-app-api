@@ -18,6 +18,7 @@ router = DefaultRouter()
 # depending on the functionality that is enabled on the ViewSet
 router.register('perfumes', views.PerfumeViewSet)
 router.register('designers', views.DesignerViewSet)
+router.register('notes', views.NoteViewSet)
 
 app_name = 'perfume'
 

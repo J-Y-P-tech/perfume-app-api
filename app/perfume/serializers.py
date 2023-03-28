@@ -3,7 +3,7 @@ Serializers for recipe APIs
 """
 from rest_framework import serializers
 
-from base.models import Perfume, Designer
+from base.models import Perfume, Designer, Note
 
 
 class DesignerSerializer(serializers.ModelSerializer):
@@ -15,14 +15,24 @@ class DesignerSerializer(serializers.ModelSerializer):
         read_only_field = ['id']
 
 
+class NoteSerializer(serializers.ModelSerializer):
+    """Serializer for notes."""
+
+    class Meta:
+        model = Note
+        fields = ['id', 'name', 'type']
+        read_only_fields = ['id']
+
+
 class PerfumeSerializer(serializers.ModelSerializer):
     """Serializer for perfumes."""
     designers = DesignerSerializer(many=True, required=False)
+    notes = NoteSerializer(many=True, required=False)
 
     class Meta:
         model = Perfume
         fields = ['id', 'title', 'rating', 'number_of_votes', 'gender',
-                  'longevity', 'sillage', 'price_value', 'designers']
+                  'longevity', 'sillage', 'price_value', 'designers', 'notes']
         read_only_fields = ['id']
 
 
@@ -41,6 +51,15 @@ class PerfumeDetailSerializer(PerfumeSerializer):
             )
             perfume.designers.add(designer_obj)
 
+    @staticmethod
+    def _get_or_create_notes(notes, perfume):
+        """Handle getting or creating notes as needed."""
+        for note in notes:
+            note_obj, created = Note.objects.get_or_create(
+                **note,
+            )
+            perfume.notes.add(note_obj)
+
     def create(self, validated_data):
         """Create a perfume.
         By default, nested serializers are read-only
@@ -48,18 +67,26 @@ class PerfumeDetailSerializer(PerfumeSerializer):
         """
         # removes designers from validated data and assign's it to variable designers
         designers = validated_data.pop('designers', [])
+        notes = validated_data.pop('notes', [])
         perfume = Perfume.objects.create(**validated_data)
         self._get_or_create_designers(designers, perfume)
+        self._get_or_create_notes(notes, perfume)
         return perfume
 
     # instance is the existing data
     # validated_data is the new one that will be added
     def update(self, instance, validated_data):
         """Update perfume."""
+
         designers = validated_data.pop('designers', None)
         if designers is not None:
             instance.designers.clear()
             self._get_or_create_designers(designers, instance)
+
+        notes = validated_data.pop('notes', None)
+        if notes is not None:
+            instance.notes.clear()
+            self._get_or_create_notes(notes, instance)
 
         # everything else will be updated
         for attr, value in validated_data.items():

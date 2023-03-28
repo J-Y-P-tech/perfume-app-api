@@ -1,5 +1,5 @@
 """
-Tests for the tags API.
+Tests for the designers API.
 """
 from django.contrib.auth import get_user_model
 from django.urls import reverse
