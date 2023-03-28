@@ -8,8 +8,10 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from base.models import Designer
+from base.models import Designer, Perfume
 from perfume.serializers import DesignerSerializer
+
+from decimal import Decimal
 
 DESIGNERS_URL = reverse('perfume:designer-list')
 
@@ -79,3 +81,64 @@ class PrivateDesignersApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         designers = Designer.objects.all()
         self.assertFalse(designers.exists())
+
+    def test_filter_designers_assigned_to_perfumes(self):
+        """Test listing designers to those assigned to perfumes."""
+        designer1 = Designer.objects.create(name='Designer1')
+        designer2 = Designer.objects.create(name='Designer2')
+        perfume = Perfume.objects.create(
+            user=self.user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+        perfume.designers.add(designer1)
+
+        res = self.client.get(DESIGNERS_URL, {'assigned_only': 1})
+
+        s1 = DesignerSerializer(designer1)
+        s2 = DesignerSerializer(designer2)
+        self.assertIn(s1.data, res.data)
+        self.assertNotIn(s2.data, res.data)
+
+    def test_filtered_designers_unique(self):
+        """Test filtered designers returns a unique list."""
+        designer = Designer.objects.create(name='Designer1')
+        Designer.objects.create(name='Designer2')
+        perfume1 = Perfume.objects.create(
+            user=self.user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+        perfume2 = Perfume.objects.create(
+            user=self.user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+        perfume1.designers.add(designer)
+        perfume2.designers.add(designer)
+
+        """
+        When the request is made with the query parameter {'assigned_only': 1}, it should only 
+        return a single DESIGNER (ing) since it is the only one that is assigned to a recipe.
+        """
+        res = self.client.get(DESIGNERS_URL, {'assigned_only': 1})
+
+        self.assertEqual(len(res.data), 1)

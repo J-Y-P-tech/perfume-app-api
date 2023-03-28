@@ -10,7 +10,33 @@ from rest_framework.response import Response
 from base.models import Perfume, Designer, Note
 from perfume import serializers
 
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiParameter,
+    OpenApiTypes,
+)
 
+"""
+We're using the extend schema view, which is the decorator that allows us 
+to extend the auto generated schema that's created by Django rest spectacular.
+"""
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter('designers',
+                             OpenApiTypes.STR,
+                             description='Coma separated list of designer IDs to filter.'
+                             ),
+            OpenApiParameter('notes',
+                             OpenApiTypes.STR,
+                             description='Coma separated list of notes IDs to filter.'
+                             ),
+        ]
+    )
+)
 class PerfumeViewSet(viewsets.ModelViewSet):
     """View for manage perfume APIs."""
     serializer_class = serializers.PerfumeDetailSerializer
@@ -20,9 +46,25 @@ class PerfumeViewSet(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
+    def _params_to_ints(self, qs):
+        """Convert a list of strings to integers."""
+        return [int(str_id) for str_id in qs.split(',')]
+
     def get_queryset(self):
         """Retrieve perfumes for authenticated user."""
-        return self.queryset.filter(user=self.request.user).order_by('-id')
+        designers = self.request.query_params.get('designers')
+        notes = self.request.query_params.get('notes')
+        queryset = self.queryset
+        if designers:
+            designer_ids = self._params_to_ints(designers)
+            queryset = queryset.filter(designers__id__in=designer_ids)
+        if notes:
+            notes_ids = self._params_to_ints(notes)
+            queryset = queryset.filter(notes__id__in=notes_ids)
+
+        return queryset.filter(
+            user=self.request.user
+        ).order_by('-id').distinct()
 
     def get_serializer_class(self):
         """Return the serializer class for request.
@@ -70,6 +112,16 @@ class PerfumeViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter('assigned_only',
+                             OpenApiTypes.INT, enum=[0, 1],
+                             description='Filter by items assigned to perfumes.'
+                             ),
+        ]
+    )
+)
 class BaseAttrViewSet(mixins.DestroyModelMixin,
                       mixins.UpdateModelMixin,
                       mixins.ListModelMixin,
@@ -79,8 +131,25 @@ class BaseAttrViewSet(mixins.DestroyModelMixin,
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Retrieve designers for authenticated users only."""
-        return self.queryset.order_by('-id')
+        """Filter queryset to authenticated user.
+        if assigned_only is not set its default value will be 0
+        bool() will convert integer provide (1 or 0) to appropriate boolean
+        """
+        assigned_only = bool(
+            int(self.request.query_params.get('assigned_only', 0))
+        )
+        queryset = self.queryset
+        # If assigned_only is True that we are going to apply another filter
+        if assigned_only:
+            """
+            Here, perfume is a foreign key field in the model for this queryset, 
+            and isnull is a field lookup that returns True if the related field 
+            is null and False otherwise. Therefore, perfume__isnull=False means 
+            we want to filter out the queryset where the perfume field is not null.
+            """
+            queryset = queryset.filter(perfume__isnull=False)
+
+        return queryset.order_by('-name').distinct()
 
 
 class DesignerViewSet(BaseAttrViewSet):

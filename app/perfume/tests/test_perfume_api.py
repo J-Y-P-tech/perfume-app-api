@@ -424,6 +424,46 @@ class PrivatePerfumeApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(perfume.notes.count(), 0)
 
+    def test_filter_by_designers(self):
+        """Test filtering perfumes by designers."""
+        p1 = create_perfume(user=self.user, title='Perufme 1')
+        p2 = create_perfume(user=self.user, title='Perfume 2')
+        designer1 = Designer.objects.create(name='Designer 1')
+        designer2 = Designer.objects.create(name='Designer 2')
+        p1.designers.add(designer1)
+        p2.designers.add(designer2)
+        p3 = create_perfume(user=self.user, title='Perfume 3')
+
+        params = {'designers': f'{designer1.id},{designer2.id}'}
+        res = self.client.get(PERFUMES_URL, params)
+
+        s1 = PerfumeSerializer(p1)
+        s2 = PerfumeSerializer(p2)
+        s3 = PerfumeSerializer(p3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+
+    def test_filter_by_notes(self):
+        """Test filtering perfumes by notes."""
+        p1 = create_perfume(user=self.user, title='Perufme 1')
+        p2 = create_perfume(user=self.user, title='Perfume 2')
+        note1 = Note.objects.create(name='Note 1', type=0)
+        note2 = Note.objects.create(name='Note 2', type=1)
+        p1.notes.add(note1)
+        p2.notes.add(note2)
+        p3 = create_perfume(user=self.user, title='Perfume 3')
+
+        params = {'notes': f'{note1.id},{note2.id}'}
+        res = self.client.get(PERFUMES_URL, params)
+
+        s1 = PerfumeSerializer(p1)
+        s2 = PerfumeSerializer(p2)
+        s3 = PerfumeSerializer(p3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+
 
 class ImageUploadTests(TestCase):
     """Tests for the image upload API."""

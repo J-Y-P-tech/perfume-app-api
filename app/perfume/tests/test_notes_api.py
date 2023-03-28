@@ -8,8 +8,10 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from base.models import Note
+from base.models import Note, Perfume
 from perfume.serializers import NoteSerializer
+
+from decimal import Decimal
 
 NOTES_URL = reverse('perfume:note-list')
 
@@ -79,3 +81,66 @@ class PrivateNotesApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         notes = Note.objects.all()
         self.assertFalse(notes.exists())
+
+    def test_filter_notes_assigned_to_perfumes(self):
+        """Test listing notes to those assigned to perfumes."""
+        note1 = Note.objects.create(name='Note 1', type=0)
+        note2 = Note.objects.create(name='Note 2', type=1)
+        perfume = Perfume.objects.create(
+            user=self.user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+        perfume.notes.add(note1)
+        # Filter only notes that are assigned to a perfume
+        # we have assigned 1 note this one should be returned
+        # ‘assigned_only’: 1 will return tag once even if it appears
+        # on many perfumes
+        res = self.client.get(NOTES_URL, {'assigned_only': 1})
+
+        s1 = NoteSerializer(note1)
+        s2 = NoteSerializer(note2)
+        self.assertIn(s1.data, res.data)
+        self.assertNotIn(s2.data, res.data)
+
+    def test_filtered_notes_unique(self):
+        """Test filtered notes returns a unique list.
+        We assign one note to 2 recipes and make sure that the API
+        returns only one result (unique)
+        """
+        note1 = Note.objects.create(name='Note 1', type=0)
+        Note.objects.create(name='Note 2', type=1)
+        perfume1 = Perfume.objects.create(
+            user=self.user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+        perfume2 = Perfume.objects.create(
+            user=self.user,
+            title='Sample perfume name',
+            rating=Decimal('5.50'),
+            number_of_votes=2500,
+            gender=0,
+            longevity=Decimal('6.1'),
+            sillage=Decimal('4.2'),
+            price_value=Decimal('7.0'),
+            description="Perfume description.",
+        )
+        perfume1.notes.add(note1)
+        perfume2.notes.add(note1)
+
+        res = self.client.get(NOTES_URL, {'assigned_only': 1})
+
+        self.assertEqual(len(res.data), 1)
